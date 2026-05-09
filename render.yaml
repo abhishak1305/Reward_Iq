@@ -5,22 +5,26 @@ services:
     env: python
     buildCommand: pip install -r backend/requirements.txt
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    disk:
+      name: rewardiq-data
+      mountPath: /data
+      sizeGB: 1
     envVars:
       - key: ENVIRONMENT
         value: production
       - key: DATABASE_URL
-        value: sqlite+aiosqlite:///rewardiq.db # Note: Use a persistent disk if you stay on SQLite
+        value: sqlite+aiosqlite:////data/rewardiq.db
       - key: JWT_SECRET_KEY
         generateValue: true
       - key: ALLOWED_ORIGINS
         value: "['https://rewardiq-frontend.onrender.com']"
 
   # Frontend: Static Site
-  - type: static
+  - type: static_site
     name: rewardiq-frontend
     env: node
     buildCommand: cd frontend && npm install && npm run build
-    staticPublishPath: frontend/dist
+    publishDir: frontend/dist
     envVars:
       - key: VITE_API_BASE_URL
         value: https://rewardiq-backend.onrender.com/api/v1
