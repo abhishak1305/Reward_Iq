@@ -1,6 +1,6 @@
 """
 Async SQLAlchemy database engine and session management.
-Supports both SQLite (local dev) and PostgreSQL (production/Neon).
+Supports SQLite (local dev) and PostgreSQL (production).
 """
 
 from sqlalchemy.ext.asyncio import (
@@ -16,21 +16,40 @@ from sqlalchemy.engine import Engine
 
 from backend.core.config import settings
 
-# Detect SQLite vs PostgreSQL
-_IS_SQLITE = settings.DATABASE_URL.startswith("sqlite")
+
+def _normalize_db_url(url: str) -> str:
+    """
+    Normalize any PostgreSQL URL variant to use the asyncpg driver.
+
+    Handles all formats that Render, Neon, Supabase, Heroku, etc. inject:
+      postgres://...              → postgresql+asyncpg://...
+      postgresql://...            → postgresql+asyncpg://...
+      postgresql+psycopg2://...   → postgresql+asyncpg://...
+      postgresql+asyncpg://...    → unchanged (already correct)
+      sqlite+aiosqlite://...      → unchanged
+    """
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql+asyncpg://", 1)
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    if url.startswith("postgresql+psycopg2://"):
+        return url.replace("postgresql+psycopg2://", "postgresql+asyncpg://", 1)
+    return url  # already correct (asyncpg or sqlite)
+
+
+_DB_URL = _normalize_db_url(settings.DATABASE_URL)
+_IS_SQLITE = _DB_URL.startswith("sqlite")
 
 if _IS_SQLITE:
-    # SQLite: use StaticPool so the same in-memory or file connection is reused
     engine = create_async_engine(
-        settings.DATABASE_URL,
+        _DB_URL,
         echo=settings.DEBUG,
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
 else:
-    # PostgreSQL / Neon: NullPool avoids connection leaks in serverless envs
     engine = create_async_engine(
-        settings.DATABASE_URL,
+        _DB_URL,
         echo=settings.DEBUG,
         poolclass=NullPool,
         connect_args={
@@ -49,9 +68,11 @@ AsyncSessionLocal = async_sessionmaker(
 
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+    """Enable FK enforcement for SQLite only (no-op for PostgreSQL)."""
+    if _IS_SQLITE:
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 
 class Base(DeclarativeBase):
@@ -60,10 +81,7 @@ class Base(DeclarativeBase):
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """
-    FastAPI dependency that yields a database session per request,
-    rolling back on error and always closing the session.
-    """
+    """FastAPI dependency: yields a DB session per request."""
     async with AsyncSessionLocal() as session:
         try:
             yield session
@@ -75,10 +93,10 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def create_all_tables() -> None:
-    """Create all tables on startup (dev/test only). Use Alembic in production."""
+    """Create all tables. Safe to call repeatedly (IF NOT EXISTS)."""
     async with engine.begin() as conn:
-        from backend.models import (  # noqa: F401 — import for side effects
-            user, employee, attendance, reward, bonus, feedback,
-            ai_prediction, notification,
+        from backend.models import (  # noqa: F401
+            user, employee, attendance, reward, bonus,
+            feedback, ai_prediction, notification,
         )
         await conn.run_sync(Base.metadata.create_all)

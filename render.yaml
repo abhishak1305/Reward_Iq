@@ -8,20 +8,18 @@ services:
     buildCommand: pip install -r backend/requirements.txt
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     envVars:
-      - key: PYTHON_VERSION          # ← THIS is the correct Render key
+      - key: PYTHON_VERSION
         value: "3.11.9"
       - key: ENVIRONMENT
         value: production
       - key: PYTHONPATH
         value: .
-      - key: DATABASE_URL
-        value: sqlite+aiosqlite:////tmp/rewardiq.db
+      # DATABASE_URL is automatically injected by Render PostgreSQL.
+      # If using Neon or another external DB, set it manually in Render Dashboard.
       - key: JWT_SECRET_KEY
         generateValue: true
       - key: ALLOWED_ORIGINS
         value: '["https://rewardiq-frontend.onrender.com"]'
-      - key: OPENROUTER_API_KEY
-        sync: false
 
   # ── Frontend: Static Site ────────────────────────────────────────────────
   - type: web
