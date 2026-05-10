@@ -15,7 +15,6 @@ services:
       - key: PYTHONPATH
         value: .
       # DATABASE_URL is automatically injected by Render PostgreSQL.
-      # If using Neon or another external DB, set it manually in Render Dashboard.
       - key: JWT_SECRET_KEY
         generateValue: true
       - key: ALLOWED_ORIGINS
