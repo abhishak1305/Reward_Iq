@@ -69,6 +69,15 @@ app.add_middleware(
 app.include_router(router)
 
 
+@app.get("/")
+async def root():
+    return JSONResponse({
+        "message": f"Welcome to {settings.APP_NAME} API",
+        "version": settings.APP_VERSION,
+        "docs": "/api/docs"
+    })
+
+
 @app.get("/api/health", tags=["health"])
 async def health():
     return JSONResponse({"status": "ok", "app": settings.APP_NAME, "version": settings.APP_VERSION})

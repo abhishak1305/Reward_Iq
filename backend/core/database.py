@@ -29,12 +29,18 @@ def _normalize_db_url(url: str) -> str:
       sqlite+aiosqlite://...      → unchanged
     """
     if url.startswith("postgres://"):
-        return url.replace("postgres://", "postgresql+asyncpg://", 1)
-    if url.startswith("postgresql://"):
-        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    if url.startswith("postgresql+psycopg2://"):
-        return url.replace("postgresql+psycopg2://", "postgresql+asyncpg://", 1)
-    return url  # already correct (asyncpg or sqlite)
+        url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    elif url.startswith("postgresql+psycopg2://"):
+        url = url.replace("postgresql+psycopg2://", "postgresql+asyncpg://", 1)
+    
+    # asyncpg does not support 'sslmode' query param (it uses 'ssl' kwarg)
+    if "sslmode=" in url:
+        import re
+        url = re.sub(r"([?&])sslmode=[^&]*&?", r"\1", url).rstrip("?&")
+        
+    return url
 
 
 _DB_URL = _normalize_db_url(settings.DATABASE_URL)
