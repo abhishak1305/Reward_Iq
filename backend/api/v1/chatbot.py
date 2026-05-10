@@ -4,6 +4,7 @@ from typing import List, Dict, Optional, Any
 from backend.ai.gemini_coach import HRFeedbackCoach
 from backend.core.security import get_current_user_id
 from backend.core.database import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from backend.models.employee import Employee
 
