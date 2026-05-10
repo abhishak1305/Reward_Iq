@@ -11,23 +11,23 @@ class HRFeedbackCoach:
         # OpenRouter expects a site name/URL in headers
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "HTTP-Referer": "http://localhost:8000",
+            "HTTP-Referer": "https://rewardiq-frontend.onrender.com",
             "X-Title": "RewardIQ HRM",
             "Content-Type": "application/json"
         }
         self.history = []
 
-    def _call_openrouter(self, messages: List[Dict]) -> str:
+    async def _call_openrouter(self, messages: List[Dict]) -> str:
         if not self.api_key:
             return "I am operating in simulated mode without an API key. Please add your OpenRouter API key to the .env file."
 
         try:
-            with httpx.Client(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=30.0) as client:
                 payload = {
                     "model": self.model,
                     "messages": messages
                 }
-                response = client.post(self.base_url, headers=self.headers, json=payload)
+                response = await client.post(self.base_url, headers=self.headers, json=payload)
                 response.raise_for_status()
                 data = response.json()
                 return data['choices'][0]['message']['content']
@@ -36,7 +36,7 @@ class HRFeedbackCoach:
             logging.error(f"OpenRouter error: {e}")
             return f"**Error:** I encountered an issue connecting to the AI service. Details: {str(e)}"
 
-    def analyze_feedback(self, employee_name: str, feedback_list: List[Dict]) -> str:
+    async def analyze_feedback(self, employee_name: str, feedback_list: List[Dict]) -> str:
         """
         Uses OpenRouter to process an array of peer feedback and generate an actionable insight.
         """
@@ -58,9 +58,9 @@ class HRFeedbackCoach:
             {"role": "user", "content": user_msg}
         ]
 
-        return self._call_openrouter(messages)
+        return await self._call_openrouter(messages)
 
-    def chat(self, user_input: str, context: str = "") -> str:
+    async def chat(self, user_input: str, context: str = "") -> str:
         """
         Handles conversational memory and follow-up questions.
         Includes optional real-time context (e.g. current leaderboard).
@@ -85,15 +85,12 @@ class HRFeedbackCoach:
                 "content": system_msg
             })
         
-        # If context changes frequently, we might want to update the system message, 
-        # but for simplicity we'll stick to the first-initialized system message for now.
-        
         self.history.append({"role": "user", "content": user_input})
         
         # Keep history manageable (last 10 interactions)
         if len(self.history) > 21:
             self.history = [self.history[0]] + self.history[-20:]
 
-        response = self._call_openrouter(self.history)
+        response = await self._call_openrouter(self.history)
         self.history.append({"role": "assistant", "content": response})
         return response

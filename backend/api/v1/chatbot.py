@@ -4,7 +4,8 @@ from typing import List, Dict, Optional, Any
 from backend.ai.gemini_coach import HRFeedbackCoach
 from backend.core.security import get_current_user_id
 from backend.core.database import get_db
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
+from backend.models.employee import Employee
 
 router = APIRouter(prefix="/ai/chat", tags=["AI Chatbot"])
 
@@ -65,7 +66,7 @@ async def chat_with_ai(request: ChatRequest, user_id: int = Depends(get_current_
         coach_instance = coaches[uid]
 
         if request.action == "analyze":
-            raw_response = coach_instance.analyze_feedback(request.user, request.feedback or [])
+            raw_response = await coach_instance.analyze_feedback(request.user, request.feedback or [])
             final_response = await handle_actions(raw_response, db, user_id)
             return {"response": final_response}
         else:
@@ -82,7 +83,7 @@ async def chat_with_ai(request: ChatRequest, user_id: int = Depends(get_current_
             for i, emp in enumerate(top_3):
                 context += f"  {i+1}. {emp.full_name} ({emp.reward_points} pts)\n"
 
-            raw_response = coach_instance.chat(request.message, context=context)
+            raw_response = await coach_instance.chat(request.message, context=context)
             final_response = await handle_actions(raw_response, db, user_id)
             return {"response": final_response}
     except Exception as e:
