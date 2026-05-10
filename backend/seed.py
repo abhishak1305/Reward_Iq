@@ -46,22 +46,29 @@ async def seed():
     await create_all_tables()
 
     async with AsyncSessionLocal() as db:
-        # Check if already seeded
+        # Check if already seeded by looking at employee count
+        from sqlalchemy import func
         from sqlalchemy import select as sa_select
-        existing_admin = await db.scalar(sa_select(User).where(User.email == "admin@rewardiq.com"))
-        if existing_admin:
-            print("[SKIP] Admin already exists. Database already seeded.")
+        employee_count = await db.scalar(sa_select(func.count()).select_from(Employee))
+        
+        if employee_count > 0:
+            print(f"[SKIP] {employee_count} employees already exist. Database already seeded.")
             return
 
-        # -- Admin user -------------------------------------------------------
-        admin = User(  # type: ignore[call-arg]
-            email="admin@rewardiq.com",
-            password_hash=hash_password("Admin@123"),
-            role=UserRole.admin,
-        )
-        db.add(admin)
-        await db.flush()  # get user.id before commit
-        print("[OK] Admin created: admin@rewardiq.com")
+        # Ensure admin exists
+        existing_admin = await db.scalar(sa_select(User).where(User.email == "admin@rewardiq.com"))
+        if not existing_admin:
+            admin = User(  # type: ignore[call-arg]
+                email="admin@rewardiq.com",
+                password_hash=hash_password("Admin@123"),
+                role=UserRole.admin,
+            )
+            db.add(admin)
+            await db.flush()
+            print("[OK] Admin created: admin@rewardiq.com")
+        else:
+            admin = existing_admin
+            print("[INFO] Using existing admin.")
 
         # -- Employees --------------------------------------------------------
         employee_users = []
