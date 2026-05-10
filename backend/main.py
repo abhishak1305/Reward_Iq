@@ -17,16 +17,20 @@ from backend.api.router import router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    Ensure all tables exist on every startup.
-    Uses CREATE TABLE IF NOT EXISTS — safe to call repeatedly.
+    Ensure all tables exist and database is seeded on every startup.
+    Uses CREATE TABLE IF NOT EXISTS and idempotency checks in seed().
     """
     try:
         await create_all_tables()
         sys.stdout.write("[INFO] Database tables verified/created.\n")
+        
+        # Auto-seed if needed
+        from backend.seed import seed
+        await seed()
+        sys.stdout.write("[INFO] Database seeding check complete.\n")
         sys.stdout.flush()
     except Exception as e:
-        sys.stdout.write(f"[WARNING] DB startup issue: {type(e).__name__}: {e}\n")
-        sys.stdout.write("  -> Check DATABASE_URL environment variable.\n")
+        sys.stdout.write(f"[WARNING] Startup issue: {type(e).__name__}: {e}\n")
         sys.stdout.flush()
     yield
 
