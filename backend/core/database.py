@@ -20,13 +20,6 @@ from backend.core.config import settings
 def _normalize_db_url(url: str) -> str:
     """
     Normalize any PostgreSQL URL variant to use the asyncpg driver.
-
-    Handles all formats that Render, Neon, Supabase, Heroku, etc. inject:
-      postgres://...              → postgresql+asyncpg://...
-      postgresql://...            → postgresql+asyncpg://...
-      postgresql+psycopg2://...   → postgresql+asyncpg://...
-      postgresql+asyncpg://...    → unchanged (already correct)
-      sqlite+aiosqlite://...      → unchanged
     """
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql+asyncpg://", 1)
@@ -35,10 +28,11 @@ def _normalize_db_url(url: str) -> str:
     elif url.startswith("postgresql+psycopg2://"):
         url = url.replace("postgresql+psycopg2://", "postgresql+asyncpg://", 1)
     
-    # asyncpg does not support 'sslmode' query param (it uses 'ssl' kwarg)
-    if "sslmode=" in url:
-        import re
-        url = re.sub(r"([?&])sslmode=[^&]*&?", r"\1", url).rstrip("?&")
+    # asyncpg is extremely sensitive to unsupported query parameters
+    # (like sslmode, channel_binding, etc. used by Render/Neon/Heroku).
+    # We strip them all for PostgreSQL URLs to prevent TypeErrors.
+    if "postgresql" in url and "?" in url:
+        url = url.split("?")[0]
         
     return url
 
