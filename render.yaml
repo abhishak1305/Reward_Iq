@@ -19,7 +19,9 @@ services:
       - key: JWT_SECRET_KEY
         generateValue: true
       - key: ALLOWED_ORIGINS
-        value: '["https://rewardiq-frontend.onrender.com"]'
+        value: "https://rewardiq-frontend.onrender.com"
+      - key: OPENROUTER_API_KEY
+        sync: false
 
   # ── Frontend: Static Site ────────────────────────────────────────────────
   - type: web
