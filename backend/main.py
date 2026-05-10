@@ -43,26 +43,22 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# ── Diagnostic Middleware ───────────────────────────────────────────────────
-@app.middleware("http")
-async def log_requests(request, call_next):
-    sys.stdout.write(f"[DEBUG] Request: {request.method} {request.url}\n")
-    sys.stdout.write(f"[DEBUG] Headers: {dict(request.headers)}\n")
-    sys.stdout.flush()
-    response = await call_next(request)
-    sys.stdout.write(f"[DEBUG] Response Status: {response.status_code}\n")
-    sys.stdout.flush()
-    return response
-
 # ── CORS ──────────────────────────────────────────────────────────────────────
-# TEMPORARY: Using ["*"] to isolate the issue. 
-# We will revert to specific origins once connectivity is confirmed.
+# Clean origins to ensure no trailing slashes or whitespace
+clean_origins = [o.strip().rstrip('/') for o in settings.ALLOWED_ORIGINS if o]
+# Add variants with and without trailing slash for safety
+final_origins = []
+for o in clean_origins:
+    final_origins.append(o)
+    final_origins.append(f"{o}/")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
+    allow_origins=final_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # ── Routes ────────────────────────────────────────────────────────────────────
