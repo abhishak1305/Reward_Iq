@@ -14,7 +14,6 @@ services:
         value: production
       - key: PYTHONPATH
         value: .
-      # DATABASE_URL is automatically injected by Render PostgreSQL.
       - key: JWT_SECRET_KEY
         generateValue: true
       - key: ALLOWED_ORIGINS
@@ -23,9 +22,8 @@ services:
         sync: false
 
   # ── Frontend: Static Site ────────────────────────────────────────────────
-  - type: web
+  - type: static
     name: rewardiq-frontend
-    runtime: static
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: frontend/dist
     routes:
