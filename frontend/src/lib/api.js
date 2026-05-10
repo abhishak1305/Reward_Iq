@@ -1,6 +1,14 @@
 export const getAuthToken = () => localStorage.getItem('token');
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
+// Warn in production if the env var is missing (means it'll hit localhost, which fails)
+if (import.meta.env.PROD && !import.meta.env.VITE_API_URL) {
+  console.error(
+    '[RewardIQ] VITE_API_URL is not set! API calls will fail. ' +
+    'Set this env var in your Render frontend service settings.'
+  );
+}
+
 export const apiFetch = async (endpoint, options = {}) => {
   const token = getAuthToken();
   const headers = {

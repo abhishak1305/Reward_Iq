@@ -1,30 +1,41 @@
 services:
-  # Backend: FastAPI Web Service
+  # ── Backend: FastAPI Web Service ───────────────────────────────────────────
   - type: web
     name: rewardiq-backend
     env: python
+    region: oregon
+    plan: free
+    pythonVersion: "3.11.9"
     buildCommand: pip install -r backend/requirements.txt
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
-    disk:
-      name: rewardiq-data
-      mountPath: /data
-      sizeGB: 1
+    # IMPORTANT: Persistent disks are a paid feature. On free tier, SQLite is ephemeral.
+    # Upgrade to a paid plan for persistence, or use a cloud DB like Neon.
     envVars:
       - key: ENVIRONMENT
         value: production
+      - key: PYTHONPATH
+        value: .
       - key: DATABASE_URL
-        value: sqlite+aiosqlite:////data/rewardiq.db
+        value: sqlite+aiosqlite:////tmp/rewardiq.db
       - key: JWT_SECRET_KEY
         generateValue: true
       - key: ALLOWED_ORIGINS
-        value: "['https://rewardiq-frontend.onrender.com']"
+        value: '["https://rewardiq-frontend.onrender.com"]'
+      - key: OPENROUTER_API_KEY
+        sync: false
 
-  # Frontend: Static Site
+  # ── Frontend: Static Site ──────────────────────────────────────────────────
   - type: web
     name: rewardiq-frontend
     runtime: static
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: frontend/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
-      - key: VITE_API_BASE_URL
+      - key: VITE_API_URL
         value: https://rewardiq-backend.onrender.com/api/v1
+      - key: NODE_VERSION
+        value: "20.19.0"

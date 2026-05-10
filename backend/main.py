@@ -15,16 +15,18 @@ from backend.api.router import router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Create tables on startup (dev mode). Use Alembic in production."""
-    if settings.ENVIRONMENT != "production":
-        try:
-            await create_all_tables()
-        except Exception as e:
-            # Server starts even if DB is not yet configured
-            import sys
-            sys.stdout.write(f"[WARNING] DB startup skipped: {type(e).__name__}\n")
-            sys.stdout.write("  -> Set DATABASE_URL in backend/.env to connect a database.\n")
-            sys.stdout.flush()
+    """
+    Ensure all tables exist on every startup.
+    Uses CREATE TABLE IF NOT EXISTS — safe to call repeatedly.
+    """
+    try:
+        await create_all_tables()
+        sys.stdout.write("[INFO] Database tables verified/created.\n")
+        sys.stdout.flush()
+    except Exception as e:
+        sys.stdout.write(f"[WARNING] DB startup issue: {type(e).__name__}: {e}\n")
+        sys.stdout.write("  -> Check DATABASE_URL environment variable.\n")
+        sys.stdout.flush()
     yield
 
 
