@@ -44,12 +44,24 @@ app = FastAPI(
 )
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
+# Clean origins to ensure no trailing slashes or whitespace
+clean_origins = [o.strip().rstrip('/') for o in settings.ALLOWED_ORIGINS if o]
+# Add both variants (with and without trailing slash) for safety
+final_origins = []
+for o in clean_origins:
+    final_origins.append(o)
+    final_origins.append(f"{o}/")
+
+sys.stdout.write(f"[INFO] CORS allowed origins: {final_origins}\n")
+sys.stdout.flush()
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=final_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # ── Routes ────────────────────────────────────────────────────────────────────
