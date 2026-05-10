@@ -1,16 +1,15 @@
 services:
-  # ── Backend: FastAPI Web Service ───────────────────────────────────────────
+  # ── Backend: FastAPI Web Service ─────────────────────────────────────────
   - type: web
     name: rewardiq-backend
     env: python
     region: oregon
     plan: free
-    pythonVersion: "3.11.9"
     buildCommand: pip install -r backend/requirements.txt
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
-    # IMPORTANT: Persistent disks are a paid feature. On free tier, SQLite is ephemeral.
-    # Upgrade to a paid plan for persistence, or use a cloud DB like Neon.
     envVars:
+      - key: PYTHON_VERSION          # ← THIS is the correct Render key
+        value: "3.11.9"
       - key: ENVIRONMENT
         value: production
       - key: PYTHONPATH
@@ -24,7 +23,7 @@ services:
       - key: OPENROUTER_API_KEY
         sync: false
 
-  # ── Frontend: Static Site ──────────────────────────────────────────────────
+  # ── Frontend: Static Site ────────────────────────────────────────────────
   - type: web
     name: rewardiq-frontend
     runtime: static
