@@ -1,12 +1,18 @@
 export const getAuthToken = () => localStorage.getItem('token');
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const getBaseUrl = () => {
+  // If we are on localhost, always try to hit the local backend first
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:8000/api/v1';
+  }
+  // Otherwise, use the production URL provided by Render/Vite
+  return import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+};
 
-// Warn in production if the env var is missing (means it'll hit localhost, which fails)
-if (import.meta.env.PROD && !import.meta.env.VITE_API_URL) {
-  console.error(
-    '[RewardIQ] VITE_API_URL is not set! API calls will fail. ' +
-    'Set this env var in your Render frontend service settings.'
-  );
+const API_BASE_URL = getBaseUrl();
+
+// Warn in production if the env var is missing
+if (import.meta.env.PROD && !import.meta.env.VITE_API_URL && window.location.hostname !== 'localhost') {
+  console.warn('[RewardIQ] Running in production but VITE_API_URL is not set.');
 }
 
 export const apiFetch = async (endpoint, options = {}) => {

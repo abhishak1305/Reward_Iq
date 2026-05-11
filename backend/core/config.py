@@ -54,32 +54,44 @@ class Settings(BaseSettings):
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
     def parse_origins(cls, v: Any) -> list[str]:
+        dev_origins = [
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:4173",
+        ]
+        
         if isinstance(v, list):
-            return v
+            return list(set(v + dev_origins))
+        
         if not isinstance(v, str):
-            return v
+            return dev_origins
+            
         v = v.strip()
-        # 1. Try JSON: ["https://..."]
+        parsed_list = []
+        
+        # 1. Try JSON
         try:
             parsed = json.loads(v)
             if isinstance(parsed, list):
-                return parsed
+                parsed_list = parsed
         except (json.JSONDecodeError, ValueError):
-            pass
-        # 2. Try Python literal: ['https://...']
-        try:
-            parsed = ast.literal_eval(v)
-            if isinstance(parsed, list):
-                return parsed
-        except (ValueError, SyntaxError):
-            pass
-        # 3. Comma-separated: https://a.com,https://b.com
-        if "," in v:
-            return [u.strip() for u in v.split(",") if u.strip()]
-        # 4. Single URL
-        if v.startswith("http"):
-            return [v]
-        return [v]
+            # 2. Try Python literal
+            try:
+                parsed = ast.literal_eval(v)
+                if isinstance(parsed, list):
+                    parsed_list = parsed
+            except (ValueError, SyntaxError):
+                # 3. Comma-separated or Single URL
+                if "," in v:
+                    parsed_list = [u.strip() for u in v.split(",") if u.strip()]
+                elif v.startswith("http"):
+                    parsed_list = [v]
+                else:
+                    parsed_list = [v]
+        
+        # Always merge with dev origins and remove duplicates
+        return list(set(parsed_list + dev_origins))
 
     # ── Pagination ────────────────────────────────────────────────────
     DEFAULT_PAGE_SIZE: int = 20
